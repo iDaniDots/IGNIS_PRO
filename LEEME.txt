@@ -1,0 +1,17 @@
+IGNIS · Sistema de detección de incendios
+
+1. Extrae todos los archivos del ZIP.
+2. Abre index.html para explorar la presentación y el catálogo.
+3. En Centro de monitoreo pulsa Configurar para conectar Home Assistant.
+4. La guía CONECTAR-IGNIS.md explica cómo abrir la web local y elegir tus sensores.
+
+Los valores reales aparecen directamente dentro de IGNIS mediante Home Assistant.
+El panel comienza SIN CONEXIÓN: no se muestran mediciones inventadas.
+La simulación es opcional y está claramente identificada.
+
+Se conservaron los ocho componentes, sus fichas, filtros, comparador, ejemplos y glosario.
+Se eliminaron las instrucciones de exposición y la sección independiente de Home Assistant.
+La conexión física requiere tus sensores ya integrados en Home Assistant.
+No es necesario cambiar el firmware de tus placas si sus lecturas ya aparecen allí.
+
+No guardes tu token en ningún archivo del proyecto.

@@ -1,0 +1,781 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="assets/ignis-mark.svg" type="image/svg+xml">
+  <title>IGNIS | Sistema de detección de incendios</title>
+  <meta name="description" content="Supervisa temperatura, humo y flama en un mismo lugar. Panel de sensores ESP32 conectado a Home Assistant.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/bootstrap.min.css">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="ignis.css">
+</head>
+<body>
+<canvas id="ember-canvas" aria-hidden="true"></canvas>
+<div class="scroll-progress-bar" id="scroll-progress" aria-hidden="true"></div>
+<div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+<header class="ignis-header">
+  <nav class="container nav-wrap" aria-label="Navegación principal">
+    <a class="brand" href="#inicio">
+      <span class="ignis-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 38"><path d="M18 2C20 12 6 14 7 24a10 10 0 0 0 20 0c0-5-3-10-6-12 0 6-5 7-5 12-5-6 7-12 2-22Z" fill="currentColor"/></svg>
+      </span>
+      IGNIS
+      <span class="brand-sub">DETECCIÓN DE INCENDIOS</span>
+    </a>
+    <div class="nav-links">
+      <a href="#monitoreo">Monitoreo</a>
+      <a href="#catalogo">Componentes</a>
+      <a href="#pinout-section">Pinout ESP32</a>
+      <a href="#actuadores-lab">Laboratorio</a>
+      <a href="#comparar">Comparador</a>
+      <a href="#esphome-generator">ESPHome</a>
+      <a href="#proyecto">El sistema</a>
+    </div>
+    <div class="header-actions">
+      <button class="cmd-trigger-btn" id="open-cmd" type="button" aria-label="Abrir paleta de acciones rápidas">Acciones <kbd>Ctrl+K</kbd></button>
+      <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Cambiar a modo oscuro" title="Alternar tema claro/oscuro">☾</button>
+      <button class="connect-nav" data-open-connect>Conectar dispositivo <span>↗</span></button>
+    </div>
+  </nav>
+</header>
+
+<main id="inicio">
+  <section class="ignis-hero container">
+    <div class="hero-copy">
+      <p class="eyebrow"><span class="ember-dot"></span> OBSERVA LAS SEÑALES. CONOCE TU ENTORNO.</p>
+      <h1>La información<br>que enciende<br><em>tu atención.</em></h1>
+      <p class="lead-copy">Temperatura, humo y flama en una sola vista. Un sistema conectado para observar las señales de tus sensores, simular escenarios de respuesta y explorar cada pieza de hardware.</p>
+      <div class="hero-actions">
+        <a class="primary-link" href="#monitoreo">Ver el monitoreo <span>↗</span></a>
+        <a class="hero-text-link" href="#pinout-section">Mapa de pines ESP32 ↓</a>
+        <a class="hero-text-link" href="#catalogo">Conoce los componentes ↓</a>
+      </div>
+      <div class="hero-meta">
+        <span>ESP32 + sensores</span>
+        <span>Lecturas en vivo</span>
+        <span>Simulador y Pinout</span>
+        <span>Proyecto académico</span>
+      </div>
+    </div>
+
+    <div class="hero-scene">
+      <div class="scene-top">
+        <span class="scene-pill">IGNIS / RED DE SENSORES</span>
+        <span class="scene-number">01 — 08</span>
+      </div>
+      <svg class="building-art" viewBox="0 0 530 365" role="img" aria-label="Esquema interactivo de sensores conectados dentro de un edificio">
+        <defs>
+          <pattern id="grid" width="22" height="22" patternUnits="userSpaceOnUse">
+            <path d="M22 0H0V22" fill="none" stroke="#ffffff" stroke-opacity=".05"/>
+          </pattern>
+          <linearGradient id="face" x2="1" y2="1">
+            <stop stop-color="#354949"/>
+            <stop offset="1" stop-color="#1c2c2d"/>
+          </linearGradient>
+          <linearGradient id="roof" x1="0" y1="0" x2="1" y2="1">
+            <stop stop-color="#3d5252"/>
+            <stop offset="1" stop-color="#28393a"/>
+          </linearGradient>
+        </defs>
+        <rect width="530" height="365" fill="url(#grid)"/>
+        <path d="M65 263 273 355 475 254 267 160Z" fill="#0d191a" stroke="#52615b"/>
+        <path d="m105 139 160-77 160 77-160 77Z" fill="url(#roof)" stroke="#8ca096"/>
+        <path d="M105 139v124l160 75V216Z" fill="url(#face)" stroke="#8ca096"/>
+        <path d="M265 216v122l160-79V139Z" fill="#172a2b" stroke="#8ca096"/>
+        <path d="m145 168 82 39v73l-82-39Z" fill="#112627" stroke="#5c726a"/>
+        <path d="m300 221 85-42v64l-85 42Z" fill="#253c3c" stroke="#5c726a"/>
+        <path d="m105 201 160 75 160-78M185 178v122M345 178v120" fill="none" stroke="#84988c" stroke-opacity=".35"/>
+        <path class="data-link-line" d="M142 164 265 224l121-60M265 224v90" fill="none" stroke="#f49d65" stroke-width="1.8"/>
+        <g class="sensor-pulse" data-hero-node="temp" tabindex="0" role="button" aria-label="Nodo de temperatura">
+          <circle cx="142" cy="164" r="21" fill="#ed9955" fill-opacity=".14"/>
+          <circle cx="142" cy="164" r="11" fill="#ed9955" fill-opacity=".26"/>
+          <circle cx="142" cy="164" r="4.5" fill="#ffd2a6"/>
+        </g>
+        <g class="sensor-pulse delay" data-hero-node="smoke" tabindex="0" role="button" aria-label="Nodo de humo y flama">
+          <circle cx="386" cy="164" r="21" fill="#ed9955" fill-opacity=".14"/>
+          <circle cx="386" cy="164" r="11" fill="#ed9955" fill-opacity=".26"/>
+          <circle cx="386" cy="164" r="4.5" fill="#ffd2a6"/>
+        </g>
+        <g class="sensor-pulse" data-hero-node="esp32" tabindex="0" role="button" aria-label="Nodo controlador ESP32">
+          <circle cx="265" cy="314" r="14" fill="#8bc7ae" fill-opacity=".18"/>
+          <circle cx="265" cy="314" r="5.5" fill="#8bc7ae"/>
+        </g>
+        <path d="M143 160V111H62M386 160V90h79M265 314v26h-90" fill="none" stroke="#9bb5a2" stroke-opacity=".65"/>
+        <g fill="#d8e6d8" font-family="monospace" font-size="9.5" font-weight="600">
+          <text x="62" y="102">TEMPERATURA</text>
+          <text x="388" y="80">HUMO / FLAMA</text>
+          <text x="175" y="355">ESP32 · WI-FI</text>
+        </g>
+      </svg>
+      <div class="hero-node-hud" id="hero-node-info">
+        <span><strong>ARQUITECTURA ACTIVA:</strong> Pasa el cursor o haz clic en los nodos del esquema para inspeccionar cada módulo.</span>
+      </div>
+      <div class="scene-footer">
+        <span><i></i>Red de sensores</span>
+        <span>Esquema interactivo del sistema</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="system-strip">
+    <div class="container">
+      <span><b>01</b> Detecta señales</span>
+      <span><b>02</b> Conecta los datos</span>
+      <span><b>03</b> Observa los cambios</span>
+      <a href="#monitoreo">Todo, en un mismo panel ↗</a>
+    </div>
+  </div>
+
+  <section id="monitoreo" class="monitor-section">
+    <div class="container">
+      <div class="section-top">
+        <div>
+          <p class="eyebrow">TU ENTORNO, EN UNA SOLA VISTA</p>
+          <h2>Centro de monitoreo<span class="heading-dot">.</span></h2>
+        </div>
+        <p>Las lecturas de tus sensores, aquí mismo.<br>Sin cambiar de pantalla.</p>
+      </div>
+
+      <div class="monitor-shell">
+        <div class="monitor-top">
+          <div class="monitor-title">
+            <span class="monitor-logo">i.</span>
+            <div>
+              <strong id="zone-title">Estación principal</strong>
+              <span id="source-caption">ESP32 / esperando conexión</span>
+            </div>
+          </div>
+          <div class="monitor-actions">
+            <span id="source-badge" class="source-badge">SIN CONEXIÓN</span>
+            <button id="configure-button" data-open-connect aria-label="Configurar conexión">Configurar ↗</button>
+          </div>
+        </div>
+
+        <div id="summary-banner" class="summary-banner">
+          <span class="summary-icon" id="summary-icon">◌</span>
+          <div>
+            <strong id="summary-title">A la espera de tus sensores</strong>
+            <p id="summary-text">Conecta tu sistema para ver las lecturas reales de temperatura, humo y flama.</p>
+          </div>
+          <span class="summary-time" id="last-sync">Sin actualizaciones</span>
+        </div>
+
+        <div class="monitor-layout">
+          <div class="monitor-main">
+            <div class="monitor-section-label">
+              <span>SEÑALES DEL ENTORNO</span>
+              <span id="available-count">0 lecturas disponibles</span>
+            </div>
+            <div id="live-metrics" class="live-metrics"></div>
+
+            <div class="live-chart-panel">
+              <div class="live-chart-top">
+                <div>
+                  <span class="monitor-section-label">COMPORTAMIENTO DE LA SEÑAL</span>
+                  <h3>El cambio, a lo largo del tiempo.</h3>
+                </div>
+                <div class="chart-controls-group">
+                  <label class="visually-hidden" for="live-variable">Variable de la gráfica</label>
+                  <select id="live-variable">
+                    <option value="temperature">Temperatura</option>
+                    <option value="gas">Señal del MQ-2</option>
+                    <option value="humidity">Humedad</option>
+                    <option value="pressure">Presión</option>
+                    <option value="resistance">Resistencia de gas</option>
+                  </select>
+                  <label class="visually-hidden" for="chart-style">Estilo de gráfica</label>
+                  <select id="chart-style">
+                    <option value="area">Curva de área</option>
+                    <option value="bars">Barras de pulso</option>
+                    <option value="step">Escalón técnico</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="session-kpi-strip" aria-label="Estadísticas de la señal seleccionada">
+                <div class="session-kpi-card"><span>Mínimo</span><strong id="stat-min">—</strong></div>
+                <div class="session-kpi-card"><span>Promedio</span><strong id="stat-avg">—</strong></div>
+                <div class="session-kpi-card"><span>Máximo</span><strong id="stat-max">—</strong></div>
+                <div class="session-kpi-card"><span>Variación Δ</span><strong id="stat-delta">—</strong></div>
+                <div class="session-kpi-card"><span>Muestras</span><strong id="stat-samples">0</strong></div>
+              </div>
+
+              <canvas id="live-chart" role="img" aria-label="Gráfica de lecturas de la sesión"></canvas>
+              <div class="chart-foot">
+                <span id="chart-caption">El historial comenzará al recibir datos.</span>
+                <div class="chart-foot-actions">
+                  <button id="export-json" type="button" disabled>Exportar JSON ↗</button>
+                  <button id="download-readings" disabled>Descargar CSV ↗</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="sim-workbench" id="sim-workbench">
+              <div class="sim-workbench-head">
+                <div>
+                  <span class="monitor-section-label">BANCO DE PRUEBAS Y ESCENARIOS SINTÉTICOS</span>
+                  <h4>Simulador interactivo de condiciones ambientales</h4>
+                </div>
+              </div>
+              <div class="sim-presets" role="group" aria-label="Escenarios preconfigurados de simulación">
+                <button type="button" class="sim-preset-btn" data-sim-preset="normal">Ambiente estable (24.5 °C)</button>
+                <button type="button" class="sim-preset-btn" data-sim-preset="smoke">Conato de humo (MQ-2 alto)</button>
+                <button type="button" class="sim-preset-btn" data-sim-preset="flame">Radiación de flama (54 °C)</button>
+                <button type="button" class="sim-preset-btn" data-sim-preset="critical">Alerta combinada crítica</button>
+              </div>
+              <div class="sim-sliders-grid">
+                <div class="sim-slider-box">
+                  <label for="sim-temp-slider"><span>Temperatura simulada</span><output id="sim-temp-out">24.5 °C</output></label>
+                  <input type="range" id="sim-temp-slider" min="15" max="75" step="0.5" value="24.5">
+                </div>
+                <div class="sim-slider-box">
+                  <label for="sim-gas-slider"><span>Lectura MQ-2 (ADC)</span><output id="sim-gas-out">700 ADC</output></label>
+                  <input type="range" id="sim-gas-slider" min="300" max="3200" step="25" value="700">
+                </div>
+                <div class="sim-slider-box">
+                  <label for="sim-hum-slider"><span>Humedad relativa</span><output id="sim-hum-out">52 %</output></label>
+                  <input type="range" id="sim-hum-slider" min="15" max="95" step="1" value="52">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <aside class="monitor-aside">
+            <div class="aside-title">
+              <span>ESTADO DEL SISTEMA</span>
+              <span class="tiny-cross">+</span>
+            </div>
+            <div class="connection-state">
+              <span id="connection-light"></span>
+              <strong id="live-status">Desconectado</strong>
+            </div>
+            <p id="connection-message" role="status">Configura la conexión para recibir los valores de tus placas.</p>
+            <div class="system-route">
+              <div><i>01</i><span>Sensor<strong>Detecta una señal</strong></span></div>
+              <div><i>02</i><span>ESP32<strong>Envía las lecturas</strong></span></div>
+              <div><i>03</i><span>IGNIS<strong>Las muestra aquí</strong></span></div>
+            </div>
+            <div class="connection-provider">
+              <span>Fuente de las lecturas</span>
+              <strong id="provider-label">Home Assistant · sin conectar</strong>
+              <small>Los cambios se reciben directamente en este panel.</small>
+            </div>
+            <button id="disconnect-button" class="outline-button" disabled>Desconectar</button>
+            <div class="demo-tools">
+              <button id="demo-button">Explorar una simulación ↗</button>
+              <button id="demo-event" hidden>Simular detección de humo</button>
+              <p id="demo-description">Prueba la interfaz con datos de ejemplo.</p>
+            </div>
+          </aside>
+        </div>
+
+        <div class="activity-bar">
+          <div><span class="activity-dot"></span> ACTIVIDAD RECIENTE</div>
+          <ol id="live-log">
+            <li>Panel listo. Todavía no hay datos de sensores.</li>
+          </ol>
+        </div>
+      </div>
+
+      <p class="monitor-footnote">Prototipo académico. El estado refleja las señales configuradas; no certifica que un espacio sea seguro. El MQ-2 sin calibrar y la resistencia de gas no indican una concentración exacta.</p>
+    </div>
+  </section>
+
+  <section class="purpose-section container">
+    <div>
+      <p class="eyebrow">TRES SEÑALES QUE CUENTAN UNA HISTORIA</p>
+      <h2>Entender el entorno<br>empieza por observarlo.</h2>
+    </div>
+    <div class="purpose-grid">
+      <article>
+        <span>01 / TEMPERATURA</span>
+        <h3>Un cambio en el ambiente.</h3>
+        <p>Las lecturas ambientales permiten seguir variaciones de temperatura y humedad a lo largo de la sesión.</p>
+      </article>
+      <article>
+        <span>02 / HUMO Y GAS</span>
+        <h3>Una señal que merece atención.</h3>
+        <p>El MQ-2 responde a humo y a determinados gases. Su señal y la detección configurada se muestran por separado.</p>
+      </article>
+      <article>
+        <span>03 / FLAMA</span>
+        <h3>Otra pieza del panorama.</h3>
+        <p>El módulo de flama aporta una señal óptica. Consultarla junto con las demás lecturas ayuda a interpretar el prototipo.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="catalog-section" id="catalogo">
+    <div class="container">
+      <div class="section-top">
+        <div>
+          <p class="eyebrow">EL CATÁLOGO</p>
+          <h2>La tecnología detrás de IGNIS.</h2>
+        </div>
+        <p>Explora su función, sus características<br>y su lugar dentro del prototipo.</p>
+      </div>
+      <div class="toolbar">
+        <div class="filters" role="group" aria-label="Filtrar por categoría">
+          <button class="filter active" data-filter="Todos" aria-pressed="true">Todos <span>8</span></button>
+          <button class="filter" data-filter="Sensores" aria-pressed="false">Sensores <span>5</span></button>
+          <button class="filter" data-filter="Actuadores" aria-pressed="false">Actuadores <span>2</span></button>
+          <button class="filter" data-filter="Controladores" aria-pressed="false">Controladores <span>1</span></button>
+        </div>
+        <label class="search-box">
+          <span aria-hidden="true">⌕</span>
+          <input type="search" id="search" placeholder="Buscar componente…" aria-label="Buscar componente">
+        </label>
+      </div>
+      <p id="result-count" class="result-count" aria-live="polite">Mostrando 8 componentes</p>
+      <div class="row g-4" id="cards"></div>
+      <div id="empty" hidden>
+        <h3>No encontramos ese componente</h3>
+        <p>Prueba con otro nombre o cambia de categoría.</p>
+        <button class="primary-link" id="reset">Ver todos los componentes</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- NUEVA SECCIÓN: Mapa Interactivo de Pines y Conexiones del ESP32 -->
+  <section class="pinout-section" id="pinout-section">
+    <div class="container">
+      <div class="section-top">
+        <div>
+          <p class="eyebrow">ARQUITECTURA DE HARDWARE</p>
+          <h2>Mapa interactivo de pines ESP32<span class="heading-dot">.</span></h2>
+        </div>
+        <p>Selecciona un componente para visualizar qué pines GPIO, I²C o ADC<br>se emplean de referencia al integrar el prototipo.</p>
+      </div>
+      <div class="pinout-grid">
+        <div class="pinout-selector-panel">
+          <div class="pinout-module-list" role="group" aria-label="Módulos para consultar pinout">
+            <button type="button" class="pinout-mod-btn active" data-pinout-mod="bme280">BME280 / BME680<small>Bus I²C · GPIO 21 / 22</small></button>
+            <button type="button" class="pinout-mod-btn" data-pinout-mod="mq2">Sensor MQ-2<small>ADC1 + Digital · GPIO 34 / 27</small></button>
+            <button type="button" class="pinout-mod-btn" data-pinout-mod="flama">Sensor de Flama<small>Entrada Digital · GPIO 26</small></button>
+            <button type="button" class="pinout-mod-btn" data-pinout-mod="dht11">Sensor DHT11<small>Datos 1-Wire · GPIO 4</small></button>
+            <button type="button" class="pinout-mod-btn" data-pinout-mod="buzzer">Buzzer Activo/Pasivo<small>Salida / PWM · GPIO 19</small></button>
+            <button type="button" class="pinout-mod-btn" data-pinout-mod="servo">Servomotor<small>Pulso PWM 50Hz · GPIO 18</small></button>
+          </div>
+          <div id="pinout-detail-box" aria-live="polite"></div>
+        </div>
+        <div class="pinout-board-panel">
+          <div class="scene-top">
+            <span class="scene-pill">ESP32 DEVKIT V1 · ESQUEMA DE REFERENCIA</span>
+            <span class="scene-number">3.3V LOGIC</span>
+          </div>
+          <div id="pinout-svg-stage"></div>
+          <div class="scene-footer">
+            <span><i></i>Verifica siempre el pinout específico de tu placa</span>
+            <span>ADC1 compatible con Wi-Fi</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- NUEVA SECCIÓN: Laboratorio Interactivo de Actuadores y Respuesta -->
+  <section class="container actuators-lab-section" id="actuadores-lab">
+    <div class="section-top">
+      <div>
+        <p class="eyebrow">LABORATORIO DE SALIDAS FÍSICAS</p>
+        <h2>Simulador de actuadores en vivo<span class="heading-dot">.</span></h2>
+      </div>
+      <p>Experimenta cómo el ESP32 transforma instrucciones digitales<br>en movimiento mecánico (PWM) y avisos acústicos.</p>
+    </div>
+    <div class="lab-grid">
+      <article class="lab-card">
+        <div>
+          <span class="example-label">CONTROL DE POSICIÓN · SERVOMOTOR PWM (50 HZ)</span>
+          <h3>Compuerta de ventilación controlada</h3>
+          <p style="font-size:13px;color:var(--muted);line-height:1.7">Ajusta el ángulo objetivo para observar cómo cambia el ancho de pulso en microsegundos que el ESP32 envía por el pin PWM.</p>
+        </div>
+        <div class="lab-stage">
+          <svg viewBox="0 0 300 175" width="100%" height="165" role="img" aria-label="Simulación interactiva de servomotor">
+            <rect x="95" y="75" width="110" height="68" rx="8" fill="#35587e" stroke="#5b84b0" stroke-width="1.5"/>
+            <rect x="85" y="92" width="130" height="12" rx="3" fill="#284564"/>
+            <text x="150" y="125" text-anchor="middle" font-family="monospace" font-size="11" fill="#d8e8f5" font-weight="bold">SERVO SG90 / MG90S</text>
+            <g id="servo-horn-group" transform="rotate(0 150 105)">
+              <rect x="143" y="25" width="14" height="84" rx="7" fill="#eb8a4e" stroke="#ffffff" stroke-width="1.5"/>
+              <circle cx="150" cy="36" r="3" fill="#ffffff"/>
+              <circle cx="150" cy="52" r="3" fill="#ffffff"/>
+            </g>
+            <circle cx="150" cy="105" r="10" fill="#e6ece8" stroke="#455a58" stroke-width="2"/>
+          </svg>
+        </div>
+        <div>
+          <label for="servo-angle-slider" style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-bottom:6px">
+            <span>Ángulo del eje</span>
+            <output id="servo-angle-out" style="font-family:var(--font-mono);color:var(--green)">90°</output>
+          </label>
+          <input type="range" id="servo-angle-slider" min="0" max="180" step="5" value="90" style="width:100%;accent-color:var(--green)">
+          <div class="lab-presets">
+            <button type="button" class="lab-preset-btn" data-servo-preset="0">0° Cerrado</button>
+            <button type="button" class="lab-preset-btn" data-servo-preset="45">45° Rendija</button>
+            <button type="button" class="lab-preset-btn active" data-servo-preset="90">90° Medio</button>
+            <button type="button" class="lab-preset-btn" data-servo-preset="180">180° Apertura total</button>
+          </div>
+          <div class="pwm-metrics">
+            <span>Pulso PWM<strong id="pwm-pulse-out">1450 µs</strong></span>
+            <span>Ciclo útil<strong id="pwm-duty-out">7.3%</strong></span>
+            <span>Compuerta<strong id="servo-state-out">Ventilación activa</strong></span>
+          </div>
+        </div>
+      </article>
+
+      <article class="lab-card">
+        <div>
+          <span class="example-label">SÍNTESIS ACÚSTICA · BUZZER PIEZOELÉCTRICO</span>
+          <h3>Generador de patrones sonoros</h3>
+          <p style="font-size:13px;color:var(--muted);line-height:1.7">Un buzzer pasivo permite variar la frecuencia de la señal cuadrada para distinguir entre avisos preventivos y alertas críticas.</p>
+        </div>
+        <div class="lab-stage">
+          <svg viewBox="0 0 300 175" width="100%" height="165" role="img" aria-label="Visualizador de ondas del buzzer">
+            <g id="buzzer-wave-rings" style="opacity:0.2;transition:opacity 0.3s">
+              <circle cx="150" cy="95" r="72" fill="none" stroke="#eb8a4e" stroke-width="1.5" stroke-dasharray="5 5"/>
+              <circle cx="150" cy="95" r="54" fill="none" stroke="#eb8a4e" stroke-width="2" stroke-opacity=".6"/>
+            </g>
+            <ellipse cx="150" cy="110" rx="42" ry="16" fill="#182e2b"/>
+            <path d="M108 78v32h84V78" fill="#243f3a"/>
+            <ellipse cx="150" cy="78" rx="42" ry="18" fill="#37544c" stroke="#5c7e73" stroke-width="1.5"/>
+            <ellipse cx="150" cy="78" rx="12" ry="6" fill="#0d1e1b"/>
+            <text x="172" y="80" font-family="monospace" font-size="14" fill="#a8d5ba">+</text>
+          </svg>
+        </div>
+        <div>
+          <label for="buzzer-freq-slider" style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-bottom:6px">
+            <span>Frecuencia de oscilación</span>
+            <output id="buzzer-freq-out" style="font-family:var(--font-mono);color:var(--green)">2200 Hz</output>
+          </label>
+          <input type="range" id="buzzer-freq-slider" min="500" max="3200" step="100" value="2200" style="width:100%;accent-color:var(--green)">
+          <div class="lab-presets">
+            <button type="button" class="lab-preset-btn" data-buzzer-pattern="alerta">Probar pulso de alerta 🔊</button>
+            <button type="button" class="lab-preset-btn" data-buzzer-pattern="sirena">Probar sirena térmica 🔊</button>
+            <button type="button" class="lab-preset-btn" data-buzzer-pattern="stop">Silenciar</button>
+          </div>
+          <div class="pwm-metrics">
+            <span>Tipo de señal<strong>Onda cuadrada</strong></span>
+            <span>Control<strong>LEDC / Tone</strong></span>
+            <span>Estado actual<strong id="buzzer-status-out">En silencio</strong></span>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section id="guia" class="container guide">
+    <div>
+      <p class="eyebrow">DE LA SEÑAL A LA ACCIÓN</p>
+      <h2>¿Cómo se conectan<br>las piezas?</h2>
+      <p>Un proyecto IoT reúne componentes con funciones diferentes. Esta es la idea detrás de su colaboración.</p>
+    </div>
+    <div class="steps">
+      <article>
+        <span>01</span>
+        <div>
+          <h3>El sensor percibe</h3>
+          <p>Recoge información del entorno, como temperatura, humedad o presencia de humo.</p>
+        </div>
+      </article>
+      <article>
+        <span>02</span>
+        <div>
+          <h3>El controlador interpreta</h3>
+          <p>El ESP32 recibe las señales y ejecuta las instrucciones programadas para procesarlas.</p>
+        </div>
+      </article>
+      <article>
+        <span>03</span>
+        <div>
+          <h3>El actuador responde</h3>
+          <p>Un buzzer emite sonido o un servomotor mueve un mecanismo según las instrucciones recibidas.</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="comparison-section" id="comparar">
+    <div class="container">
+      <div class="section-top">
+        <div>
+          <p class="eyebrow">ELIGE Y COMPARA</p>
+          <h2>Las diferencias, más claras.</h2>
+        </div>
+        <p>Selecciona hasta tres piezas y descubre<br>qué aporta cada una a un proyecto.</p>
+      </div>
+      <div class="compare-picker" id="compare-picker" role="group" aria-label="Componentes para comparar"></div>
+      <p id="compare-message" class="result-count" aria-live="polite">Puedes comparar hasta 3 componentes.</p>
+      <div class="compare-scroll" tabindex="0" role="region" aria-label="Tabla de comparación">
+        <table class="compare-table">
+          <caption class="visually-hidden">Comparación de los componentes seleccionados</caption>
+          <tbody id="compare-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- NUEVA SECCIÓN: Generador Interactivo de Configuración ESPHome YAML -->
+  <section class="esphome-section" id="esphome-generator">
+    <div class="container">
+      <div class="section-top">
+        <div>
+          <p class="eyebrow">INTEGRACIÓN CON HOME ASSISTANT</p>
+          <h2>Generador de plantilla ESPHome<span class="heading-dot">.</span></h2>
+        </div>
+        <p>Marca los módulos que incluye tu prototipo para obtener una plantilla YAML<br>de referencia lista para adaptar en ESPHome.</p>
+      </div>
+      <div class="yaml-builder-grid">
+        <div class="yaml-options-card">
+          <span class="example-label">PERSONALIZA TU NODO ESP32</span>
+          <label for="yaml-node-name" style="display:block;font-size:12px;font-weight:700;margin:12px 0 6px">Nombre identificador del nodo</label>
+          <input type="text" id="yaml-node-name" value="ignis-estacion-1" maxlength="40" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line-strong);background:var(--surface-elevated);color:var(--ink);font-family:var(--font-mono);font-size:12.5px">
+          <div class="yaml-check-grid">
+            <label class="yaml-check-item"><input type="checkbox" data-yaml-comp="bme280" checked> BME280 (I²C)</label>
+            <label class="yaml-check-item"><input type="checkbox" data-yaml-comp="bme680"> BME680 (I²C + Gas)</label>
+            <label class="yaml-check-item"><input type="checkbox" data-yaml-comp="dht11"> DHT11 (GPIO 4)</label>
+            <label class="yaml-check-item"><input type="checkbox" data-yaml-comp="mq2" checked> MQ-2 (ADC + Humo)</label>
+            <label class="yaml-check-item"><input type="checkbox" data-yaml-comp="flama" checked> Sensor de Flama</label>
+            <label class="yaml-check-item"><input type="checkbox" data-yaml-comp="buzzer" checked> Buzzer (LEDC)</label>
+            <label class="yaml-check-item"><input type="checkbox" data-yaml-comp="servo"> Servomotor (PWM)</label>
+          </div>
+          <p style="font-size:11.5px;color:var(--muted);line-height:1.7;margin:8px 0 0">Recuerda verificar los números de pin y la polaridad (`inverted: true/false`) según el módulo que utilices en tu protoboard.</p>
+        </div>
+        <div class="yaml-code-card">
+          <div class="yaml-code-top">
+            <span>esphome_ignis_config.yaml</span>
+            <div class="yaml-actions">
+              <button type="button" class="yaml-btn" id="copy-yaml-btn">Copiar YAML</button>
+              <button type="button" class="yaml-btn" id="download-yaml-btn">Descargar .yaml ↗</button>
+            </div>
+          </div>
+          <pre id="yaml-output" aria-live="polite"></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="container applications" id="aprender">
+    <div class="section-top">
+      <div>
+        <p class="eyebrow">DE LAS PIEZAS A LAS IDEAS</p>
+        <h2>¿Qué te gustaría construir?</h2>
+      </div>
+      <p>Explora ejemplos de uso para entender<br>el papel de cada componente.</p>
+    </div>
+    <div class="usecase-layout">
+      <div class="usecase-tabs" role="group" aria-label="Ejemplos de proyectos">
+        <button class="usecase-tab active" data-case="ambiente" aria-pressed="true">
+          <span>01</span>
+          <div>Estación ambiental<small>Conocer lo que nos rodea</small></div>
+          <b>↗</b>
+        </button>
+        <button class="usecase-tab" data-case="aviso" aria-pressed="false">
+          <span>02</span>
+          <div>Aviso sonoro<small>Convertir una lectura en sonido</small></div>
+          <b>↗</b>
+        </button>
+        <button class="usecase-tab" data-case="movimiento" aria-pressed="false">
+          <span>03</span>
+          <div>Mecanismo automático<small>Dar movimiento a una idea</small></div>
+          <b>↗</b>
+        </button>
+      </div>
+      <div class="usecase-panel" id="usecase-panel" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section class="learning-section">
+    <div class="container">
+      <div class="section-top">
+        <div>
+          <p class="eyebrow">EXPLORA LAS FUNCIONES</p>
+          <h2>Encuentra la pieza indicada.</h2>
+        </div>
+        <p>Elige una tarea para descubrir<br>qué componentes puedes explorar.</p>
+      </div>
+      <label for="task-select" class="task-label">Quiero aprender a…</label>
+      <select id="task-select" class="task-select">
+        <option value="ambiente">Medir temperatura y humedad</option>
+        <option value="gas">Observar una respuesta a humo o gases</option>
+        <option value="sonido">Emitir un aviso sonoro</option>
+        <option value="motor">Mover un mecanismo</option>
+        <option value="control">Procesar y comunicar datos</option>
+      </select>
+      <div id="task-results" class="task-results" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section class="container glossary-section" id="glosario">
+    <div class="section-top">
+      <div>
+        <p class="eyebrow">UN POCO DE VOCABULARIO</p>
+        <h2>La tecnología, en palabras simples.</h2>
+      </div>
+      <p>Conceptos que encontrarás<br>al explorar el catálogo.</p>
+    </div>
+    <div class="glossary-grid">
+      <article>
+        <span>01 / CONECTIVIDAD</span>
+        <h3>IoT</h3>
+        <p>Internet de las Cosas: objetos físicos que recogen o intercambian información mediante una red.</p>
+      </article>
+      <article>
+        <span>02 / ENTRADA</span>
+        <h3>Sensor</h3>
+        <p>Componente que responde a una condición del entorno y la convierte en una señal que puede interpretarse.</p>
+      </article>
+      <article>
+        <span>03 / SALIDA</span>
+        <h3>Actuador</h3>
+        <p>Componente que realiza una acción física, como producir sonido o mover un mecanismo.</p>
+      </article>
+      <article>
+        <span>04 / CONTROL</span>
+        <h3>Microcontrolador</h3>
+        <p>Circuito programable que procesa señales y ejecuta instrucciones para coordinar un sistema.</p>
+      </article>
+      <article>
+        <span>05 / COMUNICACIÓN</span>
+        <h3>I²C</h3>
+        <p>Forma de comunicación entre circuitos que utiliza una línea de datos y otra de reloj.</p>
+      </article>
+      <article>
+        <span>06 / CONEXIONES</span>
+        <h3>GPIO</h3>
+        <p>Pines de entrada o salida de propósito general. Sus funciones y límites dependen de la placa.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- NUEVA SECCIÓN: Reto Interactivo / Autoevaluación del Proyecto -->
+  <section class="container quiz-section" id="quiz-section">
+    <div class="quiz-card">
+      <div class="quiz-header">
+        <div>
+          <p class="eyebrow" style="margin-bottom:6px">RETO INTERACTIVO DE REPASO</p>
+          <h2 style="font-size:28px">Pon a prueba tu dominio del sistema<span class="heading-dot">.</span></h2>
+        </div>
+        <span class="quiz-score-pill" id="quiz-score-badge">Puntaje: 0 / 4</span>
+      </div>
+      <div id="quiz-body" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section class="container faq-section" id="preguntas">
+    <div>
+      <p class="eyebrow">RESUELVE TUS DUDAS</p>
+      <h2>Antes de comenzar.</h2>
+      <p>Respuestas breves para entender mejor las piezas del catálogo.</p>
+    </div>
+    <div class="faq-list">
+      <details>
+        <summary>¿Cuál es la diferencia entre un sensor y un actuador?</summary>
+        <p>El sensor obtiene información del entorno; el actuador realiza una acción. Un DHT11 mide temperatura y humedad, mientras que un buzzer produce sonido.</p>
+      </details>
+      <details>
+        <summary>¿Por qué el proyecto necesita un ESP32?</summary>
+        <p>El ESP32 ejecuta el programa, interpreta las entradas y coordina las salidas. También permite explorar la comunicación inalámbrica de los datos.</p>
+      </details>
+      <details>
+        <summary>¿El BME280 y el BME680 hacen lo mismo?</summary>
+        <p>Ambos miden temperatura, humedad y presión. El BME680 añade un elemento sensible a gases que entrega una medición de resistencia.</p>
+      </details>
+      <details>
+        <summary>¿Puedo conectar cualquier componente directamente?</summary>
+        <p>Depende de la placa y del módulo. Antes de conectarlos, revisa su alimentación, niveles de señal y consumo. Algunos necesitan circuitos de adaptación o una fuente adicional.</p>
+      </details>
+      <details>
+        <summary>¿La página muestra lecturas de sensores en tiempo real?</summary>
+        <p>Sí. Al conectar Home Assistant y elegir los sensores, el centro de monitoreo recibe sus cambios y los muestra aquí mismo. Si una señal no está disponible, indica que faltan datos. La simulación es una opción independiente y siempre se identifica.</p>
+      </details>
+      <details>
+        <summary>¿Las ilustraciones muestran las conexiones exactas?</summary>
+        <p>Las ilustraciones ayudan a identificar las piezas de forma general. Para montar un circuito, utiliza la ficha y el diagrama del modelo específico que tengas.</p>
+      </details>
+    </div>
+  </section>
+
+  <section class="container about" id="proyecto">
+    <div>
+      <p class="eyebrow">ACERCA DEL PROYECTO</p>
+      <h2>Un sistema conectado.<br>Una visión más clara.</h2>
+    </div>
+    <div>
+      <p>IGNIS es un sistema académico para explorar la detección de señales relacionadas con incendios mediante placas ESP32 y sensores de temperatura, humo y flama.</p>
+      <p>La plataforma reúne las lecturas del prototipo, permite observar su evolución y presenta los componentes que intervienen. Home Assistant recibe las señales de las placas y este panel las muestra en vivo.</p>
+      <span class="about-tag">Proyecto académico · Ingeniería en Computación</span>
+    </div>
+  </section>
+
+  <section class="container references-section" id="recursos">
+    <p class="eyebrow">PARA SEGUIR EXPLORANDO</p>
+    <div class="reference-links">
+      <a href="https://documentation.espressif.com/esp32_datasheet_en.html" target="_blank" rel="noopener noreferrer"><span>ESPRESSIF</span>Documentación ESP32 ↗</a>
+      <a href="https://www.bosch-sensortec.com/en/products/environmental-sensors/humidity-sensors-bme280" target="_blank" rel="noopener noreferrer"><span>BOSCH SENSORTEC</span>Conoce el BME280 ↗</a>
+      <a href="https://www.bosch-sensortec.com/en/products/environmental-sensors/gas-sensors/bme680" target="_blank" rel="noopener noreferrer"><span>BOSCH SENSORTEC</span>Conoce el BME680 ↗</a>
+      <a href="https://www.winsen-sensor.com/sensors/combustible-sensor/mq2.html" target="_blank" rel="noopener noreferrer"><span>WINSEN</span>Ficha del MQ-2 ↗</a>
+    </div>
+  </section>
+
+  <footer class="container">
+    <a class="brand" href="#inicio"><span class="ignis-footer-mark">↗</span> IGNIS</a>
+    <span>Tecnología conectada. Atención al entorno.</span>
+    <a href="#inicio">Volver arriba ↑</a>
+  </footer>
+</main>
+
+<dialog id="detail">
+  <button id="close-detail" class="close-detail" aria-label="Cerrar ficha">×</button>
+  <div id="detail-content"></div>
+</dialog>
+
+<dialog id="cmd-dialog" class="cmd-dialog" aria-labelledby="cmd-title">
+  <button id="close-cmd" class="close-detail" aria-label="Cerrar acciones rápidas">×</button>
+  <p class="eyebrow" style="margin-bottom:6px">NAVEGACIÓN Y ACCIONES RÁPIDAS</p>
+  <h2 id="cmd-title" style="font-size:22px;margin-bottom:14px">¿A dónde quieres ir?</h2>
+  <input type="search" id="cmd-input" class="cmd-search-input" placeholder="Buscar sección, componente o acción…" aria-label="Buscar acción rápida">
+  <div id="cmd-list" class="cmd-list"></div>
+</dialog>
+
+<dialog id="connection-dialog" class="connection-dialog" aria-labelledby="connection-title">
+  <button class="dialog-close" id="close-connection" aria-label="Cerrar configuración">×</button>
+  <p class="eyebrow">CONECTA TUS LECTURAS</p>
+  <h2 id="connection-title">Tu sistema, en IGNIS.</h2>
+  <p class="dialog-intro">Conecta Home Assistant y elige qué sensores quieres ver en el panel. Solo necesitas hacerlo al iniciar la sesión.</p>
+  <form id="connection-form">
+    <label for="ha-url">Dirección de Home Assistant</label>
+    <input id="ha-url" type="url" placeholder="http://homeassistant.local:8123" required autocomplete="off">
+    <label for="ha-token">Clave de acceso de Home Assistant</label>
+    <input id="ha-token" type="password" placeholder="Pega tu token de acceso de larga duración" required autocomplete="off">
+    <p class="field-help">Se utiliza solo en esta sesión. No se guarda en el navegador ni se incluye en la descarga de datos.</p>
+    <button class="primary-link" id="connect-ha" type="submit">Conectar y buscar sensores ↗</button>
+  </form>
+  <p id="config-status" class="config-status" role="status">Tu computadora debe tener acceso a la misma red que Home Assistant.</p>
+  <div id="entity-config" hidden>
+    <div class="mapping-title">
+      <span>ELIGE LAS LECTURAS</span>
+      <small>Selecciona solo sensores de tu prototipo.</small>
+    </div>
+    <label for="zone-name">Nombre del panel</label>
+    <input id="zone-name" value="Estación principal" maxlength="60">
+    <div id="entity-selectors" class="entity-selectors"></div>
+    <p class="field-help">Humo y flama necesitan señales de detección (binary_sensor). La lectura analógica del MQ-2 se muestra aparte; no se convierte automáticamente en una alarma.</p>
+    <button id="apply-entities" class="primary-link">Mostrar lecturas en el panel ↗</button>
+  </div>
+  <details class="connection-help">
+    <summary>¿Dónde encuentro la clave y los sensores?</summary>
+    <p>En tu perfil de Home Assistant, dentro de Seguridad, crea un token de acceso de larga duración. Tus placas deben estar agregadas previamente por ESPHome o MQTT. Después de conectar podrás elegir sus sensores en esta ventana.</p>
+    <p>Para una dirección local HTTP, abre esta página por HTTP local. Una página HTTPS puede bloquear conexiones locales sin cifrar. Consulta CONECTAR-IGNIS.md incluido en el proyecto.</p>
+  </details>
+</dialog>
+
+<script src="app.js"></script>
+<script src="explore.js"></script>
+<script src="ha-client.js"></script>
+<script src="monitoreo.js"></script>
+</body>
+</html>
